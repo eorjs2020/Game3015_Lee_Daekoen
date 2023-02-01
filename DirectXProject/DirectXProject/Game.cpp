@@ -157,30 +157,30 @@ void Game::Draw(const GameTimer& gt)
 
 void Game::OnMouseDown(WPARAM btnState, int x, int y)
 {
-	mLastMousePos.x = x;
+	/*mLastMousePos.x = x;
 	mLastMousePos.y = y;
 
-	SetCapture(mhMainWnd);
+	SetCapture(mhMainWnd);*/
 }
 
 void Game::OnMouseUp(WPARAM btnState, int x, int y)
 {
-	ReleaseCapture();
+	/*ReleaseCapture();*/
 }
 
 void Game::OnMouseMove(WPARAM btnState, int x, int y)
 {
-	if ((btnState & MK_LBUTTON) != 0)
-	{
-		// Make each pixel correspond to a quarter of a degree.
-		float dx = XMConvertToRadians(0.25f * static_cast<float>(x - mLastMousePos.x));
-		float dy = XMConvertToRadians(0.25f * static_cast<float>(y - mLastMousePos.y));
+	//if ((btnState & MK_LBUTTON) != 0)
+	//{
+	//	// Make each pixel correspond to a quarter of a degree.
+	//	float dx = XMConvertToRadians(0.25f * static_cast<float>(x - mLastMousePos.x));
+	//	float dy = XMConvertToRadians(0.25f * static_cast<float>(y - mLastMousePos.y));
 
-		mCamera.Pitch(dy);
-		mCamera.RotateY(dx);
-	}
-	mLastMousePos.x = x;
-	mLastMousePos.y = y;
+	//	mCamera.Pitch(dy);
+	//	mCamera.RotateY(dx);
+	//}
+	//mLastMousePos.x = x;
+	//mLastMousePos.y = y;
 }
 
 void Game::OnKeyboardInput(const GameTimer& gt)
@@ -193,44 +193,44 @@ void Game::OnKeyboardInput(const GameTimer& gt)
 	XMFLOAT3  oppositef3(-1, -1, -1);
 	XMVECTOR opposite = XMLoadFloat3(&oppositef3);
 
-	if (GetAsyncKeyState('W') & 0x8000)
-	{
-		bool hit = false;
+	//if (GetAsyncKeyState('W') & 0x8000)
+	//{
+	//	bool hit = false;
 
-		if (!hit)
-		{
-			mCamera.Walk(10.0f * dt);
+	//	if (!hit)
+	//	{
+	//		mCamera.Walk(10.0f * dt);
 
-		}
-	}
+	//	}
+	//}
 
-	if (GetAsyncKeyState('S') & 0x8000)
-	{
-		bool hit = false;
-		if (!hit)
-		{
-			mCamera.Walk(-10.0f * dt);
-		}
+	//if (GetAsyncKeyState('S') & 0x8000)
+	//{
+	//	bool hit = false;
+	//	if (!hit)
+	//	{
+	//		mCamera.Walk(-10.0f * dt);
+	//	}
 
-	}
-	if (GetAsyncKeyState('A') & 0x8000)
-	{
-		bool hit = false;
-		if (!hit)
-		{
-			mCamera.Strafe(-10.0f * dt);
-		}
+	//}
+	//if (GetAsyncKeyState('A') & 0x8000)
+	//{
+	//	bool hit = false;
+	//	if (!hit)
+	//	{
+	//		mCamera.Strafe(-10.0f * dt);
+	//	}
 
 
-	}
-	if (GetAsyncKeyState('D') & 0x8000)
-	{
-		bool hit = false;
-		if (!hit)
-		{
-			mCamera.Strafe(10.0f * dt);
-		}
-	}
+	//}
+	//if (GetAsyncKeyState('D') & 0x8000)
+	//{
+	//	bool hit = false;
+	//	if (!hit)
+	//	{
+	//		mCamera.Strafe(10.0f * dt);
+	//	}
+	//}
 
 
 	mCamera.UpdateViewMatrix();
