@@ -20,7 +20,8 @@ bool Game::Initialize()
 		return false;
 
 
-	mCamera.SetPosition(0, 5, -10);
+	mCamera.SetPosition(0, 6, -8);
+	
 	//mCamera.Pitch(3.14 / 2);
 
 	// Reset the command list to prep for initialization commands.

@@ -1,10 +1,10 @@
 #include "Entity.hpp"
 
-Entity::Entity(Game* game) : SceneNode(game), mVelocity(0, 0)
+Entity::Entity(Game* game) : SceneNode(game), mVelocity(0, 0, 0)
 {
 }
 
-void Entity::setVelocity(XMFLOAT2 velocity)
+void Entity::setVelocity(XMFLOAT3 velocity)
 {
 	mVelocity = velocity;
 }
@@ -15,18 +15,19 @@ void Entity::setVelocity(float vx, float vy)
 	mVelocity.y = vy;
 }
 
-XMFLOAT2 Entity::getVelocity() const
+XMFLOAT3 Entity::getVelocity() const
 {
 	return mVelocity;
 }
 
 void Entity::updateCurrent(const GameTimer& gt) 
 {
-	XMFLOAT2 mV;
+	XMFLOAT3 mV;
 	mV.x = mVelocity.x * gt.DeltaTime();
 	mV.y = mVelocity.y * gt.DeltaTime();
+	mV.z = mVelocity.z * gt.DeltaTime();
 
-	move(mV.x, mV.y, 0);
+	move(mV.x, mV.y, mV.z);
 
 	renderer->World = getWorldTransform();
 	renderer->NumFramesDirty++;
