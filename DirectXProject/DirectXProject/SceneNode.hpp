@@ -60,7 +60,7 @@ public:
 
 
 public:
-	SceneNode(Game* game);
+	SceneNode(Game* mGame);
 
 	void					attachChild(Ptr child);
 	Ptr						detachChild(const SceneNode& node);
@@ -92,7 +92,7 @@ private:
 	void					buildChildren();
 
 protected:
-	Game*					game;
+	Game*					mGame;
 	RenderItem*				renderer;
 private:
 	XMFLOAT3				mWorldPosition;

@@ -5,7 +5,7 @@ class Entity :
     public SceneNode
 {
 public:
-	Entity(Game* game);
+	Entity(Game* mGame);
 	void				setVelocity(XMFLOAT3 velocity);
 	void				setVelocity(float vx, float vy);
 	XMFLOAT3			getVelocity() const;

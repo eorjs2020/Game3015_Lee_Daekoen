@@ -33,7 +33,7 @@ public:
 	Game(const Game& rhs) = delete;
 	Game& operator=(const Game& rhs) = delete;
 	~Game();
-
+	ID3D12GraphicsCommandList* getCmdList();
 	virtual bool Initialize()override;
 private:
 	virtual void OnResize()override;
@@ -50,7 +50,7 @@ private:
 	void UpdateObjectCBs(const GameTimer& gt);
 	void UpdateMaterialCBs(const GameTimer& gt);
 	void UpdateMainPassCB(const GameTimer& gt);
-
+	
 	//step5
 	void LoadTextures();
 

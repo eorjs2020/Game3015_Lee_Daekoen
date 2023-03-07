@@ -14,6 +14,11 @@ Game::~Game()
 		FlushCommandQueue();
 }
 
+ID3D12GraphicsCommandList* Game::getCmdList()
+{
+	return mCommandList.Get();
+}
+
 bool Game::Initialize()
 {
 	if (!D3DApp::Initialize())

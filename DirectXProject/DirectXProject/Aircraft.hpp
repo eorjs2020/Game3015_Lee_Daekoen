@@ -14,7 +14,7 @@ public:
 
 
 public:
-	Aircraft(Type type, Game* game);
+	Aircraft(Type type, Game* mGame);
 	virtual unsigned int getCategory() const;
 
 private:

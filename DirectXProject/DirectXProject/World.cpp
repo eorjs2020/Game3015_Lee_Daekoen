@@ -1,8 +1,8 @@
 #include "World.hpp"
 
-World::World(Game* game, Player* player)
-	: mSceneGraph(new SceneNode(game))
-	, mGame(game)
+World::World(Game* mGame, Player* player)
+	: mSceneGraph(new SceneNode(mGame))
+	, mGame(mGame)
 	, mPlayerAircraft(nullptr)
 	, mBackground(nullptr)
 	, mWorldBounds(-1.5f, 1.5f, 200.0f, 0.0f) //Left, Right, Down, Up
@@ -15,7 +15,7 @@ World::World(Game* game, Player* player)
 
 void World::update(const GameTimer& gt)
 {
-	//mPlayerAircraft->setVelocity(0, 0);
+	mPlayerAircraft->setVelocity(0, 0);
 	while (!mCommandQueue.isEmpty())
 		mSceneGraph->onCommand(mCommandQueue.pop(), gt);	
 	mSceneGraph->update(gt);
