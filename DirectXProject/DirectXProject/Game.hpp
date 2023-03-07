@@ -1,4 +1,30 @@
+#pragma once
+#ifndef _GAME_H_
+#define _GAME_H_
+
+#include "../../Common/d3dApp.h"
+#include "../../Common/MathHelper.h"
+#include "../../Common/UploadBuffer.h"
+#include "FrameResource.h"
+#include "../../Common/GeometryGenerator.h"
+
+#include "Player.h"
 #include "World.hpp"
+using Microsoft::WRL::ComPtr;
+using namespace DirectX;
+using namespace DirectX::PackedVector;
+
+#pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "D3D12.lib")
+
+
+//step1
+enum class RenderLayer : int
+{
+	Opaque = 0,
+	AlphaTested,
+	Count
+};
 
 class Game : public D3DApp
 {
@@ -40,10 +66,10 @@ private:
 	void BuildMaterials();
 	void BuildRenderItems();
 	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
-
+	void processInput();
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
-private:
+public:
 
 	std::vector<std::unique_ptr<FrameResource>> mFrameResources;
 	FrameResource* mCurrFrameResource = nullptr;
@@ -87,9 +113,11 @@ private:
 	POINT mLastMousePos;
 	Camera mCamera;
 	World mWorld;
-
+	Player mPlayer;
+	
 public:
 	std::vector<std::unique_ptr<RenderItem>>& getRenderItems() { return mAllRitems; }
 	std::unordered_map<std::string, std::unique_ptr<Material>>& getMaterials() { return mMaterials; }
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>>& getGeometries() { return mGeometries; }
 };
+#endif 

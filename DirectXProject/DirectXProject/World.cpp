@@ -1,6 +1,6 @@
 #include "World.hpp"
 
-World::World(Game* game)
+World::World(Game* game, Player* player)
 	: mSceneGraph(new SceneNode(game))
 	, mGame(game)
 	, mPlayerAircraft(nullptr)
@@ -8,11 +8,16 @@ World::World(Game* game)
 	, mWorldBounds(-1.5f, 1.5f, 200.0f, 0.0f) //Left, Right, Down, Up
 	, mSpawnPosition(0.f, 0.f)
 	, mScrollSpeed(1.0f)
-{
+	, mPlayer(player)
+{	
+
 }
 
 void World::update(const GameTimer& gt)
 {
+	//mPlayerAircraft->setVelocity(0, 0);
+	while (!mCommandQueue.isEmpty())
+		mSceneGraph->onCommand(mCommandQueue.pop(), gt);	
 	mSceneGraph->update(gt);
 }
 
@@ -29,30 +34,15 @@ void World::buildScene()
 	mPlayerAircraft->setWorldRotation(-0.1f, 0, 0);
 	mPlayerAircraft->setScale(4.5, 4.5, 4.5);
 	
-	//mPlayerAircraft->setVelocity(XMFLOAT3(mScrollSpeed, 0.0, 0.0));
 	mSceneGraph->attachChild(std::move(player));
 
-	/*std::unique_ptr<Aircraft> enemy1(new Aircraft(Aircraft::Raptor, mGame));
-	auto raptor = enemy1.get();
-	raptor->setPosition(0.5, 0, 1);
-	raptor->setScale(1.0, 1.0, 1.0);
-	raptor->setWorldRotation(0, XM_PI, 0);
-	mPlayerAircraft->attachChild(std::move(enemy1));
-
-	std::unique_ptr<Aircraft> enemy2(new Aircraft(Aircraft::Raptor, mGame));
-	auto raptor2 = enemy2.get();
-	raptor2->setPosition(-0.5, 0, 1);
-	raptor2->setScale(1.0, 1.0, 1.0);
-	raptor2->setWorldRotation(0, XM_PI, 0);
-	mPlayerAircraft->attachChild(std::move(enemy2));*/
 
 	std::unique_ptr<SpriteNode> backgroundSprite(new SpriteNode(mGame));
-	mBackground = backgroundSprite.get();
-	//mBackground->setPosition(mWorldBounds.left, mWorldBounds.top);
+	mBackground = backgroundSprite.get();	
 	mBackground->setPosition(0, 0, 0.0);
 	mBackground->setScale(60.0, 1.0, 200.0);
 
-	mBackground->setVelocity(XMFLOAT3(0, 0, -mScrollSpeed));
+	mBackground->setVelocity(XMFLOAT3(0, 0, -mScrollSpeed * 2));
 	mSceneGraph->attachChild(std::move(backgroundSprite));
 
 	mSceneGraph->build();

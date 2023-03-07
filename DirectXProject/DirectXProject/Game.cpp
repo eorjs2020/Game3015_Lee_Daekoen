@@ -4,7 +4,7 @@ const int gNumFrameResources = 3;
 
 Game::Game(HINSTANCE hInstance)
 	: D3DApp(hInstance)
-	, mWorld(this)
+	, mWorld(this, &mPlayer)
 {
 }
 
@@ -40,7 +40,7 @@ bool Game::Initialize()
 	BuildRenderItems();
 	BuildFrameResources();
 	BuildPSOs();
-
+	
 	// Execute the initialization commands.
 	ThrowIfFailed(mCommandList->Close());
 	ID3D12CommandList* cmdsLists[] = { mCommandList.Get() };
@@ -48,7 +48,7 @@ bool Game::Initialize()
 
 	// Wait until initialization is complete.
 	FlushCommandQueue();
-
+	processInput();
 	return true;
 }
 
@@ -65,9 +65,11 @@ void Game::OnResize()
 
 void Game::Update(const GameTimer& gt)
 {
-	OnKeyboardInput(gt);
+	
+	processInput();
+	//OnKeyboardInput(gt);
 	mWorld.update(gt);
-	//UpdateCamera(gt);
+	UpdateCamera(gt);
 
 	// Cycle through the circular frame resource array.
 	mCurrFrameResourceIndex = (mCurrFrameResourceIndex + 1) % gNumFrameResources;
@@ -185,52 +187,6 @@ void Game::OnMouseMove(WPARAM btnState, int x, int y)
 
 void Game::OnKeyboardInput(const GameTimer& gt)
 {
-	const float dt = gt.DeltaTime();
-
-	mCamera.GetLook();
-	float tmin = 0;
-	float buffer = 0.5;
-	XMFLOAT3  oppositef3(-1, -1, -1);
-	XMVECTOR opposite = XMLoadFloat3(&oppositef3);
-
-	//if (GetAsyncKeyState('W') & 0x8000)
-	//{
-	//	bool hit = false;
-
-	//	if (!hit)
-	//	{
-	//		mCamera.Walk(10.0f * dt);
-
-	//	}
-	//}
-
-	//if (GetAsyncKeyState('S') & 0x8000)
-	//{
-	//	bool hit = false;
-	//	if (!hit)
-	//	{
-	//		mCamera.Walk(-10.0f * dt);
-	//	}
-
-	//}
-	//if (GetAsyncKeyState('A') & 0x8000)
-	//{
-	//	bool hit = false;
-	//	if (!hit)
-	//	{
-	//		mCamera.Strafe(-10.0f * dt);
-	//	}
-
-
-	//}
-	//if (GetAsyncKeyState('D') & 0x8000)
-	//{
-	//	bool hit = false;
-	//	if (!hit)
-	//	{
-	//		mCamera.Strafe(10.0f * dt);
-	//	}
-	//}
 
 
 	mCamera.UpdateViewMatrix();
@@ -238,19 +194,8 @@ void Game::OnKeyboardInput(const GameTimer& gt)
 
 void Game::UpdateCamera(const GameTimer& gt)
 {
-	// Convert Spherical to Cartesian coordinates.
-	//mEyePos.x = mRadius * sinf(mPhi) * cosf(mTheta);
-	//mEyePos.z = mRadius * sinf(mPhi) * sinf(mTheta);
-	//mEyePos.y = mRadius * cosf(mPhi);
-
-	//// Build the view matrix.
-	//XMVECTOR pos = XMVectorSet(mEyePos.x, mEyePos.y, mEyePos.z, 1.0f);
-	//XMVECTOR target = XMVectorZero();
-	//XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-
-	//XMMATRIX view = XMMatrixLookAtLH(pos, target, up);
-	//XMStoreFloat4x4(&mView, view);
-
+	
+	mCamera.UpdateViewMatrix();
 
 }
 
@@ -715,4 +660,11 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Game::GetStaticSamplers()
 		pointWrap, pointClamp,
 		linearWrap, linearClamp,
 		anisotropicWrap, anisotropicClamp };
+}
+
+void Game::processInput()
+{
+	CommandQueue& commands = mWorld.getCommandQueue();
+	mPlayer.handleEvent(commands, 46);
+	mPlayer.handleRealtimeInput(commands);
 }
