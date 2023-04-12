@@ -1,10 +1,15 @@
 #include "Game.hpp"
+#include "TitleState.h"
+#include "MenuState.h"
+#include "GameState.h"
+#include "PauseState.h"
 
 const int gNumFrameResources = 3;
 
 Game::Game(HINSTANCE hInstance)
 	: D3DApp(hInstance)
 	, mWorld(this, &mPlayer)
+	, mStack(State::Context(mPlayer, this))
 {
 }
 
@@ -13,10 +18,21 @@ Game::~Game()
 	if (md3dDevice != nullptr)
 		FlushCommandQueue();
 }
-
+void Game::RegisterStack()
+{
+	mStack.registerState<TitleState>(States::Title);	
+	mStack.registerState<MenuState>(States::Menu);
+	mStack.registerState<GameState>(States::Game);
+	mStack.registerState<PauseState>(States::Pause);
+}
 ID3D12GraphicsCommandList* Game::getCmdList()
 {
 	return mCommandList.Get();
+}
+
+void Game::ChangCaption(std::wstring caption)
+{
+	mMainWndCaption = caption;
 }
 
 bool Game::Initialize()
@@ -24,7 +40,7 @@ bool Game::Initialize()
 	if (!D3DApp::Initialize())
 		return false;
 
-
+	
 	mCamera.SetPosition(0, 6, -8);
 	
 	//mCamera.Pitch(3.14 / 2);
@@ -42,8 +58,14 @@ bool Game::Initialize()
 	BuildShadersAndInputLayout();
 	BuildShapeGeometry();
 	BuildMaterials();
-	BuildRenderItems();
-	BuildFrameResources();
+	//BuildRenderItems();
+	MaterialCBIndexCount = 0;
+	DiffuseSrvHeapIndexCount = 0;
+	ObjectCBIndex = 0;
+	RegisterStack();
+	mStack.pushState(States::Title);
+
+	//BuildFrameResources();
 	BuildPSOs();
 	
 	// Execute the initialization commands.
@@ -53,7 +75,7 @@ bool Game::Initialize()
 
 	// Wait until initialization is complete.
 	FlushCommandQueue();
-	processInput();
+	
 	return true;
 }
 
@@ -65,7 +87,7 @@ void Game::OnResize()
 	//XMMATRIX P = XMMatrixPerspectiveFovLH(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
 	//XMStoreFloat4x4(&mProj, P);
 
-	mCamera.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
+	//mCamera.SetLens(0.25f * MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
 }
 
 void Game::Update(const GameTimer& gt)
@@ -73,7 +95,7 @@ void Game::Update(const GameTimer& gt)
 	
 	processInput();
 	//OnKeyboardInput(gt);
-	mWorld.update(gt);
+	mStack.update(gt);
 	UpdateCamera(gt);
 
 	// Cycle through the circular frame resource array.
@@ -106,7 +128,7 @@ void Game::Draw(const GameTimer& gt)
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 	// Reusing the command list reuses memory.
-	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mOpaquePSO.Get()));
+	ThrowIfFailed(mCommandList->Reset(cmdListAlloc.Get(), mPSOs["opaque"].Get()));
 
 	//mScreenViewport.TopLeftX = 0.0f;
 	//mScreenViewport.TopLeftY = 0.0f;
@@ -134,9 +156,18 @@ void Game::Draw(const GameTimer& gt)
 
 	auto passCB = mCurrFrameResource->PassCB->Resource();
 	mCommandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+	mCommandList->SetPipelineState(mPSOs["alphaTested"].Get());
+	mStack.draw();
 
-	mWorld.draw();
-	DrawRenderItems(mCommandList.Get(), mOpaqueRitems);
+	if (gamePaused)
+	{
+		DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::Opaque]);
+	}
+	else
+	{
+		DrawRenderItems(mCommandList.Get(), mRitemLayer[(int)RenderLayer::AlphaTested]);
+	}
+	
 
 	// Indicate a state transition on the resource usage.
 	mCommandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(CurrentBackBuffer(),
@@ -164,30 +195,16 @@ void Game::Draw(const GameTimer& gt)
 
 void Game::OnMouseDown(WPARAM btnState, int x, int y)
 {
-	/*mLastMousePos.x = x;
-	mLastMousePos.y = y;
 
-	SetCapture(mhMainWnd);*/
 }
 
 void Game::OnMouseUp(WPARAM btnState, int x, int y)
 {
-	/*ReleaseCapture();*/
+	
 }
 
 void Game::OnMouseMove(WPARAM btnState, int x, int y)
 {
-	//if ((btnState & MK_LBUTTON) != 0)
-	//{
-	//	// Make each pixel correspond to a quarter of a degree.
-	//	float dx = XMConvertToRadians(0.25f * static_cast<float>(x - mLastMousePos.x));
-	//	float dy = XMConvertToRadians(0.25f * static_cast<float>(y - mLastMousePos.y));
-
-	//	mCamera.Pitch(dy);
-	//	mCamera.RotateY(dx);
-	//}
-	//mLastMousePos.x = x;
-	//mLastMousePos.y = y;
 }
 
 void Game::OnKeyboardInput(const GameTimer& gt)
@@ -309,7 +326,7 @@ void Game::LoadTextures()
 	//Raptor
 	auto RaptorTex = std::make_unique<Texture>();
 	RaptorTex->Name = "RaptorTex";
-	RaptorTex->Filename = L"../../Textures/Raptor.dds";
+	RaptorTex->Filename = L"../../Textures/pause.dds";
 	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
 		mCommandList.Get(), RaptorTex->Filename.c_str(),
 		RaptorTex->Resource, RaptorTex->UploadHeap));
@@ -325,6 +342,28 @@ void Game::LoadTextures()
 		DesertTex->Resource, DesertTex->UploadHeap));
 
 	mTextures[DesertTex->Name] = std::move(DesertTex);
+
+
+	//Menu Sreen
+	auto MenuTex = std::make_unique<Texture>();
+	MenuTex->Name = "MenuTex";
+	MenuTex->Filename = L"../../Textures/MenuScreen.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+		mCommandList.Get(), MenuTex->Filename.c_str(),
+		MenuTex->Resource, MenuTex->UploadHeap));
+
+	mTextures[MenuTex->Name] = std::move(MenuTex);
+
+	//Title Screen
+	auto TitleTex = std::make_unique<Texture>();
+	TitleTex->Name = "TitleTex";
+	TitleTex->Filename = L"../../Textures/TitleScreen.dds";
+	ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(md3dDevice.Get(),
+		mCommandList.Get(), TitleTex->Filename.c_str(),
+		TitleTex->Resource, TitleTex->UploadHeap));
+
+	mTextures[TitleTex->Name] = std::move(TitleTex);
+	
 }
 
 void Game::BuildRootSignature()
@@ -377,7 +416,7 @@ void Game::BuildDescriptorHeaps()
 	// Create the SRV heap.
 	//
 	D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-	srvHeapDesc.NumDescriptors = 3;
+	srvHeapDesc.NumDescriptors = mTextures.size();
 	srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 	srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
 	ThrowIfFailed(md3dDevice->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&mSrvDescriptorHeap)));
@@ -387,51 +426,38 @@ void Game::BuildDescriptorHeaps()
 	//
 	CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(mSrvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	auto EagleTex = mTextures["EagleTex"]->Resource;
-	auto RaptorTex = mTextures["RaptorTex"]->Resource;
-	auto DesertTex = mTextures["DesertTex"]->Resource;
-
 	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-
-	//This mapping enables the shader resource view (SRV) to choose how memory gets routed to the 4 return components in a shader after a memory fetch.
-	//When a texture is sampled in a shader, it will return a vector of the texture data at the specified texture coordinates.
-	//This field provides a way to reorder the vector components returned when sampling the texture.
-	//D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING  will not reorder the components and just return the data in the order it is stored in the texture resource.
 	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-
-	srvDesc.Format = EagleTex->GetDesc().Format;
-
 	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 	srvDesc.Texture2D.MostDetailedMip = 0;
-	//The number of mipmap levels to view, starting at MostDetailedMip.This field, along with MostDetailedMip allows us to
-	//specify a subrange of mipmap levels to view.You can specify - 1 to indicate to view
-	//all mipmap levels from MostDetailedMip down to the last mipmap level.
-
-	srvDesc.Texture2D.MipLevels = EagleTex->GetDesc().MipLevels;
-
-	//Specifies the minimum mipmap level that can be accessed. 0.0 means all the mipmap levels can be accessed.
-	//Specifying 3.0 means mipmap levels 3.0 to MipCount - 1 can be accessed.
 	srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-	md3dDevice->CreateShaderResourceView(EagleTex.Get(), &srvDesc, hDescriptor);
+	for (auto& it : mTextures) {
+		auto woodCrateTex = it.second->Resource;
 
-	//Raptor Descriptor
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
-	srvDesc.Format = RaptorTex->GetDesc().Format;
-	md3dDevice->CreateShaderResourceView(RaptorTex.Get(), &srvDesc, hDescriptor);
 
-	//Desert Descriptor
-	hDescriptor.Offset(1, mCbvSrvDescriptorSize);
-	srvDesc.Format = DesertTex->GetDesc().Format;
-	md3dDevice->CreateShaderResourceView(DesertTex.Get(), &srvDesc, hDescriptor);
+		srvDesc.Format = woodCrateTex->GetDesc().Format;
+		srvDesc.Texture2D.MipLevels = woodCrateTex->GetDesc().MipLevels;
+		md3dDevice->CreateShaderResourceView(woodCrateTex.Get(), &srvDesc, hDescriptor);
+
+		hDescriptor.Offset(1, mCbvSrvDescriptorSize);
+	}
 
 }
 
 void Game::BuildShadersAndInputLayout()
 {
+
+	const D3D_SHADER_MACRO alphaTestDefines[] =
+	{
+		//macro name, macro definition
+		"ALPHA_TEST", "0",    //"1" or "0" doesn't really set anything on and off
+		NULL,NULL
+	};
+
 	mShaders["standardVS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "VS", "vs_5_1");
 	mShaders["opaquePS"] = d3dUtil::CompileShader(L"Shaders/Default.hlsl", nullptr, "PS", "ps_5_1");
-
+	mShaders["alphaTestedPS"] = d3dUtil::CompileShader(L"Shaders\\Default.hlsl", alphaTestDefines, "PS", "ps_5_1");
 	mInputLayout =
 	{
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -493,8 +519,11 @@ void Game::BuildShapeGeometry()
 
 void Game::BuildPSOs()
 {
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
+	
 
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaquePsoDesc;
+	//mOpaquePSOf
 	//
 	// PSO for opaque objects.
 	//
@@ -521,7 +550,21 @@ void Game::BuildPSOs()
 	opaquePsoDesc.SampleDesc.Count = m4xMsaaState ? 4 : 1;
 	opaquePsoDesc.SampleDesc.Quality = m4xMsaaState ? (m4xMsaaQuality - 1) : 0;
 	opaquePsoDesc.DSVFormat = mDepthStencilFormat;
-	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&mOpaquePSO)));
+	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&opaquePsoDesc, IID_PPV_ARGS(&mPSOs["opaque"])));
+
+
+	// step 8
+	// PSO for alpha tested objects
+	//
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestedPsoDesc = opaquePsoDesc;
+	alphaTestedPsoDesc.PS =
+	{
+		reinterpret_cast<BYTE*>(mShaders["alphaTestedPS"]->GetBufferPointer()),
+		mShaders["alphaTestedPS"]->GetBufferSize()
+	};
+	alphaTestedPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+	ThrowIfFailed(md3dDevice->CreateGraphicsPipelineState(&alphaTestedPsoDesc, IID_PPV_ARGS(&mPSOs["alphaTested"])));
 }
 
 void Game::BuildFrameResources()
@@ -532,6 +575,9 @@ void Game::BuildFrameResources()
 			1, (UINT)mAllRitems.size(), (UINT)mMaterials.size()));
 	}
 }
+
+
+
 //step13
 void Game::BuildMaterials()
 {
@@ -565,15 +611,45 @@ void Game::BuildMaterials()
 
 	mMaterials["Desert"] = std::move(Desert);
 
+	auto Menu = std::make_unique<Material>();
+	Menu->Name = "Menu";
+	Menu->MatCBIndex = 3;
+	Menu->DiffuseSrvHeapIndex = 3;
+	Menu->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	Menu->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	Menu->Roughness = 0.2f;
+	mMaterials["Menu"] = std::move(Menu);
+
+	auto Title = std::make_unique<Material>();
+	Title->Name = "Title";
+	Title->MatCBIndex = 4;
+	Title->DiffuseSrvHeapIndex = 4;
+	Title->DiffuseAlbedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	Title->FresnelR0 = XMFLOAT3(0.05f, 0.05f, 0.05f);
+	Title->Roughness = 0.2f;
+	mMaterials["Title"] = std::move(Title);
+
 }
 
-void Game::BuildRenderItems()
+void Game::BuildRenderItems(std::string matName, std::string geoName, XMFLOAT3 position, XMFLOAT3 rotation, XMFLOAT3 scale)
 {
-	mWorld.buildScene();
+	auto boxRitem = std::make_unique<RenderItem>();
 
-	// All the render items are opaque.
-	for (auto& e : mAllRitems)
-		mOpaqueRitems.push_back(e.get());
+	XMStoreFloat4x4(&boxRitem->World, XMMatrixScaling(scale.x, scale.y, scale.z) * XMMatrixRotationRollPitchYaw(rotation.x, rotation.y, rotation.z) * XMMatrixTranslation(position.x, position.y, position.z));
+	boxRitem->ObjCBIndex = ObjectCBIndex;
+	boxRitem->Mat = mMaterials[matName].get();
+	boxRitem->Geo = mGeometries[geoName].get();
+	boxRitem->PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+	boxRitem->IndexCount = boxRitem->Geo->DrawArgs[geoName].IndexCount;
+	boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs[geoName].StartIndexLocation;
+	boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs[geoName].BaseVertexLocation;
+
+	//step4: All the render items are not opaque this time.
+	mRitemLayer[(int)RenderLayer::Opaque].push_back(boxRitem.get());
+	mRitemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
+
+	mAllRitems.push_back(std::move(boxRitem));
+	ObjectCBIndex++;
 }
 
 void Game::DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems)
@@ -669,7 +745,8 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> Game::GetStaticSamplers()
 
 void Game::processInput()
 {
-	CommandQueue& commands = mWorld.getCommandQueue();
+	mStack.handleEvent();
+	/*CommandQueue& commands = mWorld.getCommandQueue();
 	mPlayer.handleEvent(commands, 46);
-	mPlayer.handleRealtimeInput(commands);
+	mPlayer.handleRealtimeInput(commands);*/
 }

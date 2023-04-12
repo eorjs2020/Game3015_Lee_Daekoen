@@ -19,7 +19,8 @@ struct AircraftMover
 	void operator() (SceneNode& node, const GameTimer& gt) const
 	{
 		Aircraft& aircraft = static_cast<Aircraft&>(node);
-		aircraft.setVelocity(mVelocity.x, mVelocity.y);
+		
+		aircraft.Move(mVelocity.x, mVelocity.y);
 	}
 
 	XMFLOAT2 mVelocity;

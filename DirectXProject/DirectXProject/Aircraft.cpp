@@ -30,6 +30,13 @@ unsigned int Aircraft::getCategory() const
 	}
 }
 
+void Aircraft::Move(float vx, float vy)
+{
+	
+	mVelocity.x = vx;
+	mVelocity.y = vy;
+}
+
 void Aircraft::drawCurrent() const
 {
 	UINT objCBByteSize = d3dUtil::CalcConstantBufferByteSize(sizeof(ObjectConstants));
@@ -58,6 +65,8 @@ void Aircraft::drawCurrent() const
 
 	}
 }
+
+
 
 void Aircraft::buildCurrent()
 {

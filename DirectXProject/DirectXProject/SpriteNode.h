@@ -6,8 +6,8 @@ class SpriteNode :
 {
 public:
 	SpriteNode(Game* mGame);
-
+	void buildSprite(std::string MatName, std::string GeoName);
+	void buildSpriteOpaque(std::string MatName, std::string GeoName);
 private:
 	virtual void		drawCurrent() const;
-	virtual void		buildCurrent();
 };

@@ -7,7 +7,7 @@ World::World(Game* mGame, Player* player)
 	, mBackground(nullptr)
 	, mWorldBounds(-1.5f, 1.5f, 200.0f, 0.0f) //Left, Right, Down, Up
 	, mSpawnPosition(0.f, 0.f)
-	, mScrollSpeed(1.0f)
+	, mScrollSpeed(5.0f)
 	, mPlayer(player)
 {	
 
@@ -40,10 +40,28 @@ void World::buildScene()
 	std::unique_ptr<SpriteNode> backgroundSprite(new SpriteNode(mGame));
 	mBackground = backgroundSprite.get();	
 	mBackground->setPosition(0, 0, 0.0);
-	mBackground->setScale(60.0, 1.0, 200.0);
-
+	mBackground->setScale(50.0, 1.0, 900.0);
+	mBackground->buildSprite("Desert", "boxGeo");
 	mBackground->setVelocity(XMFLOAT3(0, 0, -mScrollSpeed * 2));
 	mSceneGraph->attachChild(std::move(backgroundSprite));
+
+	std::unique_ptr<SpriteNode> backgroundSprite2(new SpriteNode(mGame));
+	mBackground = backgroundSprite2.get();
+	mBackground->setPosition(-25, 0, 0.0);
+	mBackground->setScale(100.0, 1.0, 900.0);
+	mBackground->setWorldRotation(0, 0, -1);
+	mBackground->buildSprite("Desert", "boxGeo");
+	mBackground->setVelocity(XMFLOAT3(0, 0, -mScrollSpeed * 2));
+	mSceneGraph->attachChild(std::move(backgroundSprite2));
+
+	std::unique_ptr<SpriteNode> backgroundSprite3(new SpriteNode(mGame));
+	mBackground = backgroundSprite3.get();
+	mBackground->setPosition(25, 0, 0.0);
+	mBackground->setScale(100.0, 1.0, 900.0);
+	mBackground->setWorldRotation(0, 0, 1);
+	mBackground->buildSprite("Desert", "boxGeo");
+	mBackground->setVelocity(XMFLOAT3(0, 0, -mScrollSpeed * 2));
+	mSceneGraph->attachChild(std::move(backgroundSprite3));
 
 	mSceneGraph->build();
 }

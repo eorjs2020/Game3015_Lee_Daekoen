@@ -94,7 +94,7 @@ private:
 protected:
 	Game*					mGame;
 	RenderItem*				renderer;
-private:
+protected:
 	XMFLOAT3				mWorldPosition;
 	XMFLOAT3				mWorldRotation;
 	XMFLOAT3				mWorldScaling;

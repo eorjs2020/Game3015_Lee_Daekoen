@@ -7,7 +7,7 @@
 #include "../../Common/UploadBuffer.h"
 #include "FrameResource.h"
 #include "../../Common/GeometryGenerator.h"
-
+#include "StateStack.h"
 #include "Player.h"
 #include "World.hpp"
 using Microsoft::WRL::ComPtr;
@@ -35,7 +35,7 @@ public:
 	~Game();
 	ID3D12GraphicsCommandList* getCmdList();
 	virtual bool Initialize()override;
-private:
+public:
 	virtual void OnResize()override;
 	virtual void Update(const GameTimer& gt)override;
 	virtual void Draw(const GameTimer& gt)override;
@@ -64,11 +64,18 @@ private:
 	void BuildPSOs();
 	void BuildFrameResources();
 	void BuildMaterials();
-	void BuildRenderItems();
+	void BuildRenderItems(std::string matName, std::string geoName, XMFLOAT3 position, XMFLOAT3 rotation, XMFLOAT3 scale);
 	void DrawRenderItems(ID3D12GraphicsCommandList* cmdList, const std::vector<RenderItem*>& ritems);
 	void processInput();
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
-
+	void ChangCaption(std::wstring caption);
+	void RegisterStack();
+	void FlushCommandList() {
+		FlushCommandQueue();
+		MaterialCBIndexCount = 0;
+		DiffuseSrvHeapIndexCount = 0;
+		ObjectCBIndex = 0;
+	}
 public:
 
 	std::vector<std::unique_ptr<FrameResource>> mFrameResources;
@@ -92,11 +99,12 @@ public:
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> mInputLayout;
 
-	ComPtr<ID3D12PipelineState> mOpaquePSO = nullptr;
-
+	//ComPtr<ID3D12PipelineState> mOpaquePSO = nullptr;
+	std::unordered_map<std::string, ComPtr<ID3D12PipelineState>> mPSOs;
 	// List of all the render items.
 	std::vector<std::unique_ptr<RenderItem>> mAllRitems;
 
+	std::vector<RenderItem*> mRitemLayer[(int)RenderLayer::Count];
 	// Render items divided by PSO.
 	std::vector<RenderItem*> mOpaqueRitems;
 
@@ -114,7 +122,13 @@ public:
 	Camera mCamera;
 	World mWorld;
 	Player mPlayer;
-	
+	StateStack mStack;
+	bool gamePaused = false;
+	std::unordered_map<std::string, std::wstring> mTexture;
+
+	int MaterialCBIndexCount;
+	int DiffuseSrvHeapIndexCount;
+	int ObjectCBIndex;
 public:
 	std::vector<std::unique_ptr<RenderItem>>& getRenderItems() { return mAllRitems; }
 	std::unordered_map<std::string, std::unique_ptr<Material>>& getMaterials() { return mMaterials; }
